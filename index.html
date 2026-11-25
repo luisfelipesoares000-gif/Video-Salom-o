@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Salomão foi salvo? • @tempodiario</title>
+  <style>
+    :root {
+      --bg: #070913;
+      --card: #12162b;
+      --gold: #f5b700;
+      --gold-light: #ffd166;
+      --teal: #2ec4b6;
+      --text: #f3f5fa;
+      --muted: #9aa3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at top, #1b2142 0%, var(--bg) 65%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 14px 40px;
+    }
+    header { text-align: center; margin-bottom: 16px; max-width: 640px; }
+    .badge {
+      display: inline-block;
+      background: rgba(245, 183, 0, 0.14);
+      color: var(--gold-light);
+      border: 1px solid rgba(245, 183, 0, 0.4);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    h1 { font-size: clamp(1.35rem, 3.8vw, 1.95rem); line-height: 1.2; margin-bottom: 6px; }
+    p.sub { color: var(--muted); font-size: 0.92rem; }
+    .stage-wrap {
+      background: var(--card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 22px;
+      padding: 14px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.58);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 440px;
+    }
+    .video-box {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      background: #05060c;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    canvas, video { width: 100%; height: 100%; display: block; object-fit: contain; }
+    .controls { width: 100%; display: grid; gap: 10px; margin-top: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .voice-box {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      padding: 10px 12px;
+      border-radius: 12px;
+    }
+    .voice-box label { font-size: 0.78rem; color: var(--gold-light); font-weight: 700; }
+    select {
+      width: 100%;
+      background: #0d1020;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.86rem;
+    }
+    button, a.btn {
+      appearance: none;
+      border: none;
+      border-radius: 12px;
+      padding: 13px 16px;
+      font-size: 0.98rem;
+      font-weight: 800;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: transform 0.12s ease, opacity 0.15s ease, filter 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    button:active, a.btn:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-play {
+      background: #232a47;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    .btn-play:hover { filter: brightness(1.12); }
+    .btn-download {
+      background: linear-gradient(135deg, #f5b700, #ff9900);
+      color: #11131f;
+      box-shadow: 0 8px 24px rgba(245, 183, 0, 0.3);
+      font-size: 1.02rem;
+    }
+    .btn-ready {
+      background: linear-gradient(135deg, #2ec4b6, #1ca396);
+      color: #06181a;
+      box-shadow: 0 8px 24px rgba(46, 196, 182, 0.3);
+      font-size: 1.03rem;
+    }
+    .progress-wrap {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+      display: none;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--gold), var(--teal));
+      transition: width 0.15s linear;
+    }
+    .status {
+      font-size: 0.84rem;
+      color: var(--muted);
+      text-align: center;
+      min-height: 20px;
+      line-height: 1.35;
+    }
+    .download-fallback { display: none; width: 100%; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="badge">@tempodiario • Modo Dinâmico 2.0</div>
+    <h1>Salomão foi salvo ou não?</h1>
+    <p class="sub">Com apresentador animado desde o segundo 0, cortes rápidos e vozes dramáticas.</p>
+  </header>
+
+  <main class="stage-wrap">
+    <div class="video-box">
+      <video id="mp4Player" class="hidden" controls playsinline preload="metadata"></video>
+      <canvas id="stage" width="1080" height="1920"></canvas>
+    </div>
+
+    <div id="mp4Controls" class="controls hidden">
+      <a class="btn btn-ready" href="salomao_tempodiario.mp4" download="salomao_tempodiario.mp4">
+        ⬇️ BAIXAR VÍDEO (.MP4 COM 2 VOZES NEURAIS)
+      </a>
+      <button id="switchToCanvasBtn" class="btn-play" type="button">
+        🎨 Ver versão interativa em Canvas
+      </button>
+    </div>
+
+    <div id="canvasControls" class="controls">
+      <div class="voice-box">
+        <label for="voiceSelect">🎙️ Voz do Preview (dica: use Edge para vozes "Natural"):</label>
+        <select id="voiceSelect"><option>Carregando vozes...</option></select>
+      </div>
+      <div class="row">
+        <button id="btnPlay" class="btn-play" type="button">▶ Assistir Preview</button>
+        <button id="btnStop" class="btn-play" type="button">⏹ Reiniciar</button>
+      </div>
+      <button id="btnRenderDownload" class="btn-download" type="button">
+        ⬇️ GERAR E BAIXAR VÍDEO
+      </button>
+      <div id="progressWrap" class="progress-wrap">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      <a id="manualDownloadLink" class="btn btn-ready download-fallback" download="salomao_tempodiario.mp4">
+        ⬇️ Clique aqui para salvar novamente
+      </a>
+      <p id="statusText" class="status">Pronto! Dê play para ver o apresentador animado do início ao fim.</p>
+    </div>
+  </main>
+
+<script>
+(() => {
+  const CANAL_NOME = "TEMPO DIÁRIO";
+  const CANAL_HANDLE = "@tempodiario";
+  const W = 1080, H = 1920;
+
+  const CENAS = [
+    {
+      id: "gancho",
+      titulo: "O MISTÉRIO DE SALOMÃO",
+      corTopo: [14, 16, 40], corBase: [6, 8, 18], corGlow: [245, 183, 0], destaque: "#ffd166",
+      beats: [
+        { dur: 3.1, humor: "empolgado", rate: 1.18, pitch: 1.08, texto: "O homem mais sábio que já pisou na Terra..." },
+        { dur: 4.5, humor: "choque",    rate: 1.12, pitch: 0.94, texto: "terminou no inferno? A história de Salomão tem um final que quase ninguém percebeu." }
+      ]
+    },
+    {
+      id: "auge",
+      titulo: "GIBEOM • O AUGE",
+      corTopo: [18, 30, 62], corBase: [8, 12, 24], corGlow: [255, 195, 30], destaque: "#ffd166",
+      beats: [
+        { dur: 4.8, humor: "empolgado", rate: 1.18, pitch: 1.06, texto: "Tudo começou em Gibeom. Em vez de dinheiro ou poder, Salomão pediu sabedoria." },
+        { dur: 6.4, humor: "empolgado", rate: 1.22, pitch: 1.10, texto: "Deus gostou tanto que deu tudo a ele: seiscentos e sessenta e seis talentos de ouro, três mil provérbios e o templo mais glorioso do mundo!" }
+      ]
+    },
+    {
+      id: "queda",
+      titulo: "1 REIS 11 • A QUEDA",
+      corTopo: [48, 12, 30], corBase: [14, 6, 14], corGlow: [220, 38, 68], destaque: "#ff5964",
+      beats: [
+        { dur: 5.2, humor: "choque", rate: 1.18, pitch: 1.05, texto: "Mas a glória virou armadilha! A Bíblia diz que ele teve setecentas esposas e trezentas concubinas. Mil mulheres!" },
+        { dur: 5.8, humor: "tenso",  rate: 1.10, pitch: 0.92, texto: "E na velhice, elas desviaram o coração dele para deuses falsos, com altares proibidos em Jerusalém." }
+      ]
+    },
+    {
+      id: "ira",
+      titulo: "O REINO RASGADO",
+      corTopo: [56, 16, 16], corBase: [14, 6, 8], corGlow: [255, 70, 50], destaque: "#ff5f4b",
+      beats: [
+        { dur: 4.5, humor: "tenso", rate: 1.12, pitch: 0.90, texto: "A resposta de Deus foi dura. Em Primeiro Reis capítulo onze, o Senhor se irou porque apareceu a ele duas vezes..." },
+        { dur: 4.8, humor: "epico", rate: 1.02, pitch: 0.80, texto: "e avisou: o reino seria rasgado, tirando dez tribos da mão de sua família!" }
+      ]
+    },
+    {
+      id: "silencio",
+      titulo: "O SILÊNCIO EM REIS",
+      corTopo: [20, 22, 38], corBase: [8, 9, 15], corGlow: [120, 140, 200], destaque: "#96b9ff",
+      beats: [
+        { dur: 4.6, humor: "misterio", rate: 1.08, pitch: 0.94, texto: "E aqui mora o susto. O livro de Reis conta a morte de Salomão sem registrar nenhum pedido de perdão." },
+        { dur: 4.6, humor: "choque",   rate: 1.14, pitch: 1.00, texto: "E séculos depois, Neemias ainda usa Salomão como alerta de quem pecou gravemente!" }
+      ]
+    },
+    {
+      id: "eclesiastes",
+      titulo: "PISTA 1 • ECLESIASTES",
+      corTopo: [42, 28, 14], corBase: [14, 10, 6], corGlow: [255, 175, 65], destaque: "#ffd166",
+      beats: [
+        { dur: 5.4, humor: "misterio", rate: 1.18, pitch: 1.06, texto: "Então ele se perdeu para sempre? Espera! Olha para Eclesiastes. Um rei cansado no fim da vida chama todo luxo de vaidade..." },
+        { dur: 4.8, humor: "epico",    rate: 1.00, pitch: 0.82, texto: "e fecha com uma frase: Teme a Deus e guarda os seus mandamentos!" }
+      ]
+    },
+    {
+      id: "alianca",
+      titulo: "PISTA 2 • 2 SAMUEL 7",
+      corTopo: [12, 38, 46], corBase: [6, 14, 20], corGlow: [46, 196, 182], destaque: "#48e5d6",
+      beats: [
+        { dur: 4.0, humor: "convicto", rate: 1.15, pitch: 1.04, texto: "E tem uma segunda pista pesada em Segundo Samuel sete. Deus prometeu a Davi:" },
+        { dur: 5.8, humor: "epico",    rate: 1.02, pitch: 0.82, texto: "se ele pecar, eu o castigarei, mas a minha misericórdia não se apartará dele, como apartei de Saul." }
+      ]
+    },
+    {
+      id: "final",
+      titulo: "VEREDITO FINAL",
+      corTopo: [18, 20, 46], corBase: [6, 8, 18], corGlow: [245, 183, 0], destaque: "#ffd166",
+      beats: [
+        { dur: 4.4, humor: "convicto",  rate: 1.16, pitch: 1.02, texto: "A Bíblia não crava uma frase final, mas deixa o rastro do arrependimento e da aliança." },
+        { dur: 4.8, humor: "empolgado", rate: 1.22, pitch: 1.10, texto: "E aí: Salomão foi salvo ou não? Comenta sim ou não e segue o Tempo Diário!" }
+      ]
+    }
+  ];
+
+  let cursor = 0;
+  const BEATS = [];
+  const gruposLegenda = [];
+
+  CENAS.forEach((c) => {
+    c.start = cursor;
+    c.beats.forEach((b) => {
+      b.start = cursor;
+      b.end = cursor + b.dur;
+      b.cena = c;
+      BEATS.push(b);
+
+      const tokens = b.texto.split(/\s+/);
+      const pesos = tokens.map((t) => Math.max(2, t.replace(/[^\p{L}\p{N}]/gu, "").length));
+      const soma = pesos.reduce((a, x) => a + x, 0);
+      let wt = b.start + 0.08;
+      const util = b.dur - 0.18;
+      const palavras = tokens.map((t, i) => {
+        const d = util * (pesos[i] / soma);
+        const obj = { text: t, start: wt, dur: d };
+        wt += d;
+        return obj;
+      });
+
+      let bloco = [];
+      palavras.forEach((p) => {
+        bloco.push(p);
+        if (bloco.length >= 3 || /[.!?:;]$/.test(p.text)) {
+          gruposLegenda.push({
+            start: bloco[0].start,
+            end: bloco[bloco.length - 1].start + bloco[bloco.length - 1].dur + 0.06,
+            palavras: bloco
+          });
+          bloco = [];
+        }
+      });
+      if (bloco.length) {
+        gruposLegenda.push({
+          start: bloco[0].start,
+          end: bloco[bloco.length - 1].start + bloco[bloco.length - 1].dur + 0.08,
+          palavras: bloco
+        });
+      }
+      cursor = b.end;
+    });
+    c.end = cursor;
+    c.dur = c.end - c.start;
+  });
+  const TOTAL_DUR = cursor;
+
+  const canvas = document.getElementById("stage");
+  const ctx = canvas.getContext("2d");
+  const mp4Player = document.getElementById("mp4Player");
+  const mp4Controls = document.getElementById("mp4Controls");
+  const canvasControls = document.getElementById("canvasControls");
+  const switchToCanvasBtn = document.getElementById("switchToCanvasBtn");
+  const voiceSelect = document.getElementById("voiceSelect");
+  const btnPlay = document.getElementById("btnPlay");
+  const btnStop = document.getElementById("btnStop");
+  const btnRenderDownload = document.getElementById("btnRenderDownload");
+  const progressWrap = document.getElementById("progressWrap");
+  const progressBar = document.getElementById("progressBar");
+  const manualDownloadLink = document.getElementById("manualDownloadLink");
+  const statusText = document.getElementById("statusText");
+
+  fetch("salomao_tempodiario.mp4", { method: "HEAD" })
+    .then((res) => {
+      if (res.ok) {
+        mp4Player.src = "salomao_tempodiario.mp4";
+        mp4Player.classList.remove("hidden");
+        mp4Controls.classList.remove("hidden");
+        canvas.classList.add("hidden");
+        canvasControls.classList.add("hidden");
+      }
+    })
+    .catch(() => {});
+
+  switchToCanvasBtn.addEventListener("click", () => {
+    mp4Player.pause();
+    mp4Player.classList.add("hidden");
+    mp4Controls.classList.add("hidden");
+    canvas.classList.remove("hidden");
+    canvasControls.classList.remove("hidden");
+  });
+
+  let vozesPt = [];
+  function carregarVozes() {
+    if (!("speechSynthesis" in window)) return;
+    const todas = window.speechSynthesis.getVoices();
+    vozesPt = todas.filter((v) => v.lang.toLowerCase().startsWith("pt"));
+    vozesPt.sort((a, b) => {
+      const score = (v) =>
+        (v.name.includes("Natural") ? 50 : 0) +
+        (v.name.includes("Google") ? 35 : 0) +
+        (v.name.includes("Antonio") || v.name.includes("Fabio") || v.name.includes("Daniel") ? 20 : 0) +
+        (v.lang === "pt-BR" ? 15 : 0);
+      return score(b) - score(a);
+    });
+    voiceSelect.innerHTML = "";
+    if (!vozesPt.length) {
+      const opt = document.createElement("option");
+      opt.textContent = "Voz padrão do navegador";
+      voiceSelect.appendChild(opt);
+      return;
+    }
+    vozesPt.forEach((v, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = `${v.name} (${v.lang})`;
+      voiceSelect.appendChild(opt);
+    });
+  }
+  if ("speechSynthesis" in window) {
+    carregarVozes();
+    window.speechSynthesis.onvoiceschanged = carregarVozes;
+  }
+
+  function easeOutBack(x) {
+    x = Math.max(0, Math.min(1, x));
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+  }
+  function easeOutCubic(x) {
+    x = Math.max(0, Math.min(1, x));
+    return 1 - Math.pow(1 - x, 3);
+  }
+  function hexToRgba(hex, a) {
+    const n = parseInt(hex.replace("#", ""), 16);
+    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+  }
+  function roundRect(x, y, w, h, r, fill, stroke, lw = 4) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(); }
+  }
+  function txtCentro(txt, x, y, size, color, strokeW = 0) {
+    ctx.font = `900 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    if (strokeW > 0) {
+      ctx.lineWidth = strokeW;
+      ctx.strokeStyle = "#000000";
+      ctx.lineJoin = "round";
+      ctx.strokeText(txt, x, y);
+    }
+    ctx.fillStyle = color;
+    ctx.fillText(txt, x, y);
+  }
+
+  function desenharRaiosLuz(cx, cy, t, corHex) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(t * 0.25);
+    for (let i = 0; i < 10; i++) {
+      ctx.rotate((Math.PI * 2) / 10);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-90, -780);
+      ctx.lineTo(90, -780);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(corHex, 0.055);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function desenharCoroa(drawX, drawY, s, tilt = 0, cor = "#ffcc29") {
+    ctx.save();
+    ctx.translate(drawX, drawY);
+    ctx.rotate(tilt);
+    ctx.beginPath();
+    ctx.moveTo(-55 * s, 20 * s); ctx.lineTo(-64 * s, -24 * s);
+    ctx.lineTo(-28 * s, -4 * s); ctx.lineTo(0, -38 * s);
+    ctx.lineTo(28 * s, -4 * s); ctx.lineTo(64 * s, -24 * s);
+    ctx.lineTo(55 * s, 20 * s); ctx.closePath();
+    ctx.fillStyle = cor; ctx.fill();
+    ctx.lineWidth = 4 * s; ctx.strokeStyle = "#1e140a"; ctx.stroke();
+    ctx.restore();
+  }
+
+  function desenharApresentador(cx, cy, s, t, boca, humor) {
+    const bob = Math.sin(t * 4.2) * 5 * s;
+    const headTilt = humor === "misterio" ? -0.07 : humor === "choque" ? 0.04 : Math.sin(t * 2.1) * 0.025;
+    cy += bob;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+
+    const glow = ctx.createRadialGradient(0, -10 * s, 20 * s, 0, -10 * s, 220 * s);
+    glow.addColorStop(0, "rgba(255, 209, 102, 0.22)");
+    glow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(-240 * s, -260 * s, 480 * s, 520 * s);
+
+    ctx.beginPath();
+    ctx.moveTo(-145 * s, 220 * s);
+    ctx.quadraticCurveTo(-130 * s, 55 * s, -55 * s, 45 * s);
+    ctx.lineTo(55 * s, 45 * s);
+    ctx.quadraticCurveTo(130 * s, 55 * s, 145 * s, 220 * s);
+    ctx.closePath();
+    ctx.fillStyle = "#1d2747";
+    ctx.fill();
+    ctx.lineWidth = 6 * s; ctx.strokeStyle = "#0b0e1a"; ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-36 * s, 46 * s);
+    ctx.lineTo(0, 140 * s);
+    ctx.lineTo(36 * s, 46 * s);
+    ctx.closePath();
+    ctx.fillStyle = "#f5b700";
+    ctx.fill();
+
+    const gestoY = Math.sin(t * 9.0) * 14 * s * (0.4 + boca);
+    const maoEsqX = humor === "misterio" ? -65 * s : -135 * s;
+    const maoEsqY = humor === "choque" ? 55 * s + gestoY : humor === "misterio" ? 75 * s : 135 * s + gestoY;
+    const maoDirX = humor === "empolgado" || humor === "convicto" ? 150 * s : 135 * s;
+    const maoDirY = humor === "empolgado" ? 40 * s + gestoY : humor === "choque" ? 55 * s - gestoY : 130 * s - gestoY;
+
+    [[maoEsqX, maoEsqY], [maoDirX, maoDirY]].forEach(([mx, my]) => {
+      ctx.beginPath();
+      ctx.arc(mx, my, 25 * s, 0, Math.PI * 2);
+      ctx.fillStyle = "#eab68c"; ctx.fill();
+      ctx.lineWidth = 5 * s; ctx.strokeStyle = "#1a120d"; ctx.stroke();
+    });
+
+    ctx.save();
+    ctx.rotate(headTilt);
+
+    ctx.beginPath();
+    ctx.arc(0, -52 * s, 86 * s, Math.PI, 0);
+    ctx.fillStyle = "#1c171b";
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(0, -35 * s, 76 * s, 82 * s, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#eab68c"; ctx.fill();
+    ctx.lineWidth = 6 * s; ctx.strokeStyle = "#19120d"; ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(-76 * s, -52 * s);
+    ctx.quadraticCurveTo(-55 * s, -135 * s, 10 * s, -128 * s);
+    ctx.quadraticCurveTo(68 * s, -125 * s, 78 * s, -52 * s);
+    ctx.quadraticCurveTo(30 * s, -85 * s, -15 * s, -72 * s);
+    ctx.quadraticCurveTo(-55 * s, -80 * s, -76 * s, -52 * s);
+    ctx.closePath();
+    ctx.fillStyle = "#1c171b"; ctx.fill();
+    ctx.lineWidth = 5 * s; ctx.strokeStyle = "#0c0a0d"; ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(0, 14 * s, 54 * s, 38 * s, 0, 0.15, Math.PI - 0.15);
+    ctx.strokeStyle = "#241d22"; ctx.lineWidth = 10 * s; ctx.stroke();
+
+    const piscar = (t % 3.1) > 2.97;
+    const eyeScale = humor === "choque" ? 1.28 : humor === "tenso" ? 0.82 : 1.0;
+    [-1, 1].forEach((side) => {
+      const ox = side * 29 * s, oy = -42 * s;
+      if (piscar) {
+        ctx.beginPath(); ctx.moveTo(ox - 13 * s, oy); ctx.lineTo(ox + 13 * s, oy);
+        ctx.lineWidth = 5 * s; ctx.strokeStyle = "#19120d"; ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.ellipse(ox, oy, 13 * s * eyeScale, 15 * s * eyeScale, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.lineWidth = 3 * s; ctx.strokeStyle = "#19120d"; ctx.stroke();
+
+        const lookX = humor === "misterio" ? 3 * s : 0;
+        ctx.beginPath();
+        ctx.arc(ox + lookX, oy, 6.5 * s, 0, Math.PI * 2);
+        ctx.fillStyle = "#18141a"; ctx.fill();
+        ctx.beginPath();
+        ctx.arc(ox + lookX - 2 * s, oy - 2.5 * s, 2.2 * s, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.fill();
+      }
+
+      const browY = oy - (humor === "choque" ? 26 : 20) * s;
+      const tiltB = humor === "tenso" || humor === "epico" ? 7 * s : humor === "choque" ? -6 * s : -3 * s;
+      ctx.beginPath();
+      ctx.moveTo(ox - 16 * s, browY + side * tiltB);
+      ctx.lineTo(ox + 16 * s, browY - side * tiltB);
+      ctx.lineWidth = 6.5 * s; ctx.strokeStyle = "#1c171b"; ctx.stroke();
+    });
+
+    const bh = (4 + 17 * boca) * s;
+    const bw = (humor === "choque" ? 14 : 20) * s;
+    ctx.beginPath();
+    ctx.ellipse(0, 12 * s, bw, bh, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#54131a"; ctx.fill();
+    ctx.lineWidth = 3.5 * s; ctx.strokeStyle = "#190f0f"; ctx.stroke();
+    if (boca > 0.35) {
+      ctx.beginPath();
+      ctx.ellipse(0, 12 * s + bh * 0.45, bw * 0.55, bh * 0.35, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#e06d76"; ctx.fill();
+    }
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function desenharBadgePop(cx, cy, numTxt, rotulo, cor, tempoCena, delay = 0) {
+    const dt = tempoCena - delay;
+    if (dt < 0) return;
+    const s = easeOutBack(Math.min(1, dt / 0.35));
+    const bw = 720 * s, bh = 150 * s;
+    if (bw < 20) return;
+    roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 26, "rgba(12,16,30,0.92)", cor, 5);
+    if (s > 0.6) {
+      txtCentro(numTxt, cx, cy - 22 * s, Math.round(60 * s), cor, 6);
+      txtCentro(rotulo, cx, cy + 38 * s, Math.round(28 * s), "#ebeef5", 0);
+    }
+  }
+
+  function desenharCena(t) {
+    let beat = BEATS[BEATS.length - 1];
+    for (let i = 0; i < BEATS.length; i++) {
+      if (t >= BEATS[i].start && t < BEATS[i].end) { beat = BEATS[i]; break; }
+    }
+    const cena = beat.cena;
+    const tCena = Math.max(0, t - cena.start);
+    const prog = Math.min(1, tCena / cena.dur);
+    const boca = 0.22 + 0.72 * Math.abs(Math.sin(t * 14.5)) * (0.45 + 0.55 * Math.sin(t * 6.0));
+    const zoomPunch = 1 + 0.08 * Math.exp(-tCena * 9.0);
+
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, `rgb(${cena.corTopo.join(",")})`);
+    grad.addColorStop(1, `rgb(${cena.corBase.join(",")})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    desenharRaiosLuz(540, 400, t, cena.destaque);
+
+    const rad = ctx.createRadialGradient(540, 420, 20, 540, 420, 560);
+    rad.addColorStop(0, `rgba(${cena.corGlow.join(",")}, 0.34)`);
+    rad.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = rad;
+    ctx.fillRect(0, 0, W, H);
+
+    for (let i = 0; i < 26; i++) {
+      const sx = (i * 197 + 53) % W;
+      const py = H - ((t * (55 + (i % 5) * 24) + i * 113) % H);
+      const px = sx + Math.sin(t * 1.8 + i) * 26;
+      ctx.beginPath();
+      ctx.arc(px, py, 3 + (i % 4) * 2, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(cena.destaque, 0.48);
+      ctx.fill();
+    }
+
+    ctx.save();
+    ctx.translate(540, 360);
+    ctx.scale(zoomPunch, zoomPunch);
+    ctx.translate(-540, -360);
+
+    if (cena.id === "gancho") {
+      const p = 1 + 0.09 * Math.sin(t * 6);
+      txtCentro("?", 540, 355, Math.round(310 * p), cena.destaque, 10);
+      desenharCoroa(540, 215 + Math.sin(t * 4) * 10, 1.15, -0.14);
+      txtCentro("CÉU OU INFERNO?", 540, 500, 42, "#ffffff", 6);
+    } else if (cena.id === "auge") {
+      const hs = easeOutCubic(Math.min(1, prog * 1.5));
+      const by = 520;
+      const ty = Math.min(by - 80, by - 220 * hs);
+      roundRect(330, ty, 420, by - 40 - ty, 0, "#f2e0b9", "#281e12", 4);
+      [-1, 1].forEach((sd) => roundRect(540 + sd * 135 - 20, ty - 8, 40, by - 36 - ty, 0, "#f5b700", "#37230a", 4));
+      roundRect(495, by - 135 * hs, 90, Math.max(20, 135 * hs - 40), 14, "#aa7319", "#28190a", 4);
+      for (let m = 0; m < 6; m++) {
+        const my = 180 + ((t * 160 + m * 70) % 340);
+        const mx = 230 + m * 125;
+        ctx.beginPath(); ctx.arc(mx, my, 16, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffd166"; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = "#5c3d00"; ctx.stroke();
+      }
+    } else if (cena.id === "queda") {
+      [280, 800].forEach((ax) => {
+        roundRect(ax - 55, 390, 110, 120, 8, "#3d1e33", "#140a10", 4);
+        const ch = 35 + 15 * Math.sin(t * 12 + ax);
+        ctx.beginPath(); ctx.ellipse(ax, 380 - ch / 2, 24, ch / 2 + 12, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 85, 45, 0.9)"; ctx.fill();
+      });
+      desenharCoroa(540, 320, 1.35, Math.sin(t * 3) * 0.25 + 0.25, "#b98c28");
+      txtCentro("IDOLATRIA", 540, 470, 52, "#ff5964", 8);
+    } else if (cena.id === "ira") {
+      const gap = easeOutCubic(Math.min(1, prog * 1.4)) * 115;
+      const shake = Math.sin(t * 44) * 8 * Math.max(0, 1 - prog * 1.5);
+      ctx.fillStyle = "#7a1f82"; ctx.strokeStyle = "#ffd166"; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(540 - gap + shake, 210); ctx.lineTo(380 - gap + shake, 250);
+      ctx.lineTo(350 - gap + shake, 500); ctx.lineTo(525 - gap + shake, 490); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(540 + gap + shake, 210); ctx.lineTo(700 + gap + shake, 250);
+      ctx.lineTo(730 + gap + shake, 500); ctx.lineTo(555 + gap + shake, 490); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(540 + shake, 170); ctx.lineTo(518 + shake, 330);
+      ctx.lineTo(562 + shake, 345); ctx.lineTo(535 + shake, 520);
+      ctx.strokeStyle = "#ff503c"; ctx.lineWidth = 10; ctx.stroke();
+    } else if (cena.id === "silencio") {
+      const sl = easeOutBack(Math.min(1, tCena / 0.45));
+      roundRect(350, 190, 380, 320, 26, "#e0cda8", "#5f4628", 6);
+      ctx.beginPath(); ctx.moveTo(350, 350); ctx.lineTo(730, 350);
+      ctx.strokeStyle = "#a52630"; ctx.lineWidth = 14; ctx.stroke();
+      ctx.beginPath(); ctx.arc(540, 350, 44 * sl, 0, Math.PI * 2);
+      ctx.fillStyle = "#b9202d"; ctx.fill();
+      txtCentro("1 REIS 11", 540, 265, 44, "#372616");
+      txtCentro("SEM PEDIDO DE PERDÃO", 540, 445, 28, "#6e2823");
+    } else if (cena.id === "eclesiastes") {
+      roundRect(270, 190, 540, 320, 22, "#f2e2bc", "#8c642d", 6);
+      txtCentro("ECLESIASTES 12:13", 540, 250, 36, "#5f3714");
+      txtCentro('"Vaidade de vaidades..."', 540, 325, 36, "#32261c");
+      if (prog > 0.45) {
+        txtCentro("TEME A DEUS!", 540, 425, 56, "#b43719", 2);
+      }
+    } else if (cena.id === "alianca") {
+      const tilt = Math.sin(t * 2.4) * 0.14;
+      const cx = 540, cy = 340;
+      ctx.beginPath(); ctx.moveTo(cx, cy - 120); ctx.lineTo(cx, cy + 160);
+      ctx.strokeStyle = "#f5b700"; ctx.lineWidth = 12; ctx.stroke();
+      const dx = 210 * Math.cos(tilt), dy = 210 * Math.sin(tilt);
+      ctx.beginPath(); ctx.moveTo(cx - dx, cy - 80 - dy); ctx.lineTo(cx + dx, cy - 80 + dy);
+      ctx.strokeStyle = "#ffd75a"; ctx.lineWidth = 10; ctx.stroke();
+      [[-1, "CASTIGO", "#ff5f4b"], [1, "GRAÇA", "#48e5d6"]].forEach(([sd, lbl, col]) => {
+        const px = cx + sd * dx, py = cy - 80 + sd * dy;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + 110);
+        ctx.strokeStyle = "#dcdcdc"; ctx.lineWidth = 4; ctx.stroke();
+        roundRect(px - 105, py + 110, 210, 68, 16, "#121a24", col, 4);
+        txtCentro(lbl, px, py + 144, 32, col);
+      });
+    } else if (cena.id === "final") {
+      roundRect(100, 195, 415, 290, 24, "rgba(16,48,52,0.92)", "#48e5d6", 5);
+      txtCentro("SALVO", 307, 260, 52, "#48e5d6");
+      txtCentro("Eclesiastes 12", 307, 340, 30, "#f0f5fa");
+      txtCentro("Aliança 2 Sm 7", 307, 405, 30, "#f0f5fa");
+
+      roundRect(565, 195, 415, 290, 24, "rgba(52,18,28,0.92)", "#ff5964", 5);
+      txtCentro("INCERTO", 772, 260, 52, "#ff5964");
+      txtCentro("Silêncio em Reis", 772, 340, 30, "#f0f5fa");
+      txtCentro("Alerta Neemias", 772, 405, 30, "#f0f5fa");
+    }
+    ctx.restore();
+
+    desenharApresentador(540, 850, 1.48 * (1 + 0.04 * (zoomPunch - 1)), t, boca, beat.humor);
+
+    if (cena.id === "gancho") {
+      desenharBadgePop(540, 1210, "FINAL SECRETO", "1 REIS 3 • 1 REIS 11", cena.destaque, tCena, 1.2);
+    } else if (cena.id === "auge") {
+      if (prog < 0.55) {
+        const val = Math.round(666 * easeOutCubic(Math.min(1, prog / 0.38)));
+        desenharBadgePop(540, 1210, `${val} TALENTOS`, "DE OURO POR ANO", cena.destaque, tCena, 0.2);
+      } else {
+        const val = Math.round(3000 * easeOutCubic(Math.min(1, (prog - 0.55) / 0.22)));
+        desenharBadgePop(540, 1210, val.toLocaleString("pt-BR"), "PROVÉRBIOS ESCRITOS", cena.destaque, tCena - cena.dur * 0.55, 0);
+      }
+    } else if (cena.id === "queda") {
+      const mul = Math.round(1000 * easeOutCubic(Math.min(1, prog / 0.42)));
+      desenharBadgePop(540, 1210, mul.toLocaleString("pt-BR"), "700 ESPOSAS + 300 CONCUBINAS", cena.destaque, tCena, 0.15);
+    } else if (cena.id === "ira") {
+      const tri = Math.round(10 * easeOutCubic(Math.min(1, prog / 0.5)));
+      desenharBadgePop(540, 1210, `${tri} DE 12 TRIBOS`, "ARRANCADAS DA FAMÍLIA", cena.destaque, tCena, 0.2);
+    } else if (cena.id === "silencio") {
+      desenharBadgePop(540, 1210, "NEEMIAS 13:26", "LEMBRADO COMO ALERTA", cena.destaque, tCena, 1.6);
+    } else if (cena.id === "eclesiastes") {
+      desenharBadgePop(540, 1210, "ECLESIASTES 12:13", "ARREPENDIMENTO NO FIM?", cena.destaque, tCena, 0.4);
+    } else if (cena.id === "alianca") {
+      desenharBadgePop(540, 1210, "2 SAMUEL 7:15", "MISERICÓRDIA PROMETIDA", cena.destaque, tCena, 0.2);
+    } else if (cena.id === "final") {
+      desenharBadgePop(540, 1210, `${CANAL_NOME} • COMENTA!`, "SALVO? DIGITE SIM OU NÃO", cena.destaque, tCena, 0);
+    }
+
+    if (tCena < 0.14) {
+      ctx.fillStyle = `rgba(255,255,255,${(0.14 - tCena) * 2.0})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.fillStyle = "rgba(255,255,255,0.14)";
+    ctx.fillRect(0, 0, W, 14);
+    ctx.fillStyle = cena.destaque;
+    ctx.fillRect(0, 0, W * Math.min(1, t / TOTAL_DUR), 14);
+
+    roundRect(65, 55, 345, 60, 24, "rgba(0,0,0,0.65)", "rgba(255,255,255,0.28)", 2);
+    txtCentro(CANAL_HANDLE, 237, 85, 34, "#ffd166");
+
+    roundRect(435, 55, 580, 60, 24, "rgba(0,0,0,0.65)", cena.destaque, 2);
+    txtCentro(cena.titulo, 725, 85, 29, "#f0f2f8");
+
+    const grupo = gruposLegenda.find((g) => t >= g.start && t <= g.end);
+    if (grupo) {
+      const espaco = 22;
+      const itens = grupo.palavras.map((p) => {
+        const ativo = t >= p.start && t <= p.start + p.dur + 0.05;
+        const size = ativo ? 74 : 64;
+        ctx.font = `900 ${size}px system-ui, "Segoe UI", Arial, sans-serif`;
+        const up = p.text.toUpperCase();
+        return { up, ativo, size, w: ctx.measureText(up).width };
+      });
+      const totalW = itens.reduce((a, b) => a + b.w, 0) + espaco * (itens.length - 1);
+      const linhas = (totalW > 940 && itens.length > 1)
+        ? [itens.slice(0, Math.ceil(itens.length / 2)), itens.slice(Math.ceil(itens.length / 2))]
+        : [itens];
+
+      const yBase = linhas.length === 1 ? 1480 : 1430;
+      linhas.forEach((linha, li) => {
+        const lw = linha.reduce((a, b) => a + b.w, 0) + espaco * (linha.length - 1);
+        let cx = (W - lw) / 2;
+        const cy = yBase + li * 92;
+        linha.forEach((item) => {
+          const bounceY = item.ativo ? -6 : 0;
+          ctx.font = `900 ${item.size}px system-ui, "Segoe UI", Arial, sans-serif`;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.lineWidth = 11;
+          ctx.strokeStyle = "#000000";
+          ctx.lineJoin = "round";
+          ctx.strokeText(item.up, cx, cy + bounceY);
+          ctx.fillStyle = item.ativo ? cena.destaque : "#ffffff";
+          ctx.fillText(item.up, cx, cy + bounceY);
+          cx += item.w + espaco;
+        });
+      });
+    }
+  }
+
+  function iniciarMusica(destNode) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const actx = new AudioCtx();
+    const master = actx.createGain();
+    master.gain.value = 0.20;
+    master.connect(actx.destination);
+    if (destNode) master.connect(destNode);
+
+    const acordes = [
+      [146.83, 220.0, 261.63],
+      [116.54, 174.61, 233.08],
+      [174.61, 220.0, 261.63],
+      [130.81, 196.0, 261.63]
+    ];
+    let step = 0;
+    const tocar = () => {
+      const now = actx.currentTime;
+      acordes[step % acordes.length].forEach((freq) => {
+        const osc = actx.createOscillator();
+        const g = actx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now);
+        g.gain.setValueAtTime(0.001, now);
+        g.gain.linearRampToValueAtTime(0.18, now + 0.5);
+        g.gain.linearRampToValueAtTime(0.001, now + 3.9);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 3.95);
+      });
+      step++;
+    };
+    tocar();
+    const t1 = setInterval(tocar, 4000);
+    const t2 = setInterval(() => {
+      const now = actx.currentTime;
+      const osc = actx.createOscillator();
+      const g = actx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(70, now);
+      osc.frequency.exponentialRampToValueAtTime(36, now + 0.24);
+      g.gain.setValueAtTime(0.32, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(g); g.connect(master);
+      osc.start(now); osc.stop(now + 0.30);
+    }, 1000);
+
+    return { stop: () => { clearInterval(t1); clearInterval(t2); actx.close().catch(() => {}); } };
+  }
+
+  function falarBeat(beat) {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(beat.texto);
+    u.lang = "pt-BR";
+    u.rate = beat.rate;
+    u.pitch = beat.pitch;
+    const idx = parseInt(voiceSelect.value, 10);
+    if (!Number.isNaN(idx) && vozesPt[idx]) u.voice = vozesPt[idx];
+    window.speechSynthesis.speak(u);
+  }
+
+  let rafId = null, audioObj = null, playing = false, ultimoBeat = -1, startTs = 0;
+
+  function pararTudo() {
+    playing = false;
+    cancelAnimationFrame(rafId);
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    if (audioObj) { audioObj.stop(); audioObj = null; }
+    btnPlay.textContent = "▶ Assistir Preview";
+  }
+
+  btnPlay.addEventListener("click", () => {
+    if (playing) { pararTudo(); statusText.textContent = "Pausado."; return; }
+    playing = true;
+    ultimoBeat = -1;
+    btnPlay.textContent = "⏸ Pausar";
+    statusText.textContent = "Reproduzindo preview dinâmico...";
+    audioObj = iniciarMusica(null);
+    startTs = performance.now();
+
+    const loop = (now) => {
+      if (!playing) return;
+      const t = (now - startTs) / 1000;
+      if (t >= TOTAL_DUR) {
+        pararTudo();
+        desenharCena(0.8);
+        statusText.textContent = "Fim do preview!";
+        return;
+      }
+      const bIdx = BEATS.findIndex((b) => t >= b.start && t < b.end);
+      if (bIdx !== -1 && bIdx !== ultimoBeat) {
+        ultimoBeat = bIdx;
+        falarBeat(BEATS[bIdx]);
+      }
+      desenharCena(t);
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+  });
+
+  btnStop.addEventListener("click", () => {
+    pararTudo();
+    desenharCena(0.8);
+    statusText.textContent = "Reiniciado.";
+  });
+
+  btnRenderDownload.addEventListener("click", () => {
+    if (typeof MediaRecorder === "undefined") {
+      alert("Seu navegador não suporta MediaRecorder. Use Chrome ou Edge atualizado.");
+      return;
+    }
+    pararTudo();
+    btnRenderDownload.disabled = true; btnPlay.disabled = true; btnStop.disabled = true;
+    manualDownloadLink.style.display = "none";
+    progressWrap.style.display = "block";
+    progressBar.style.width = "0%";
+    statusText.textContent = "Renderizando vídeo em 1080×1920... mantenha a aba aberta.";
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const recActx = new AudioCtx();
+    const dest = recActx.createMediaStreamDestination();
+    const master = recActx.createGain();
+    master.gain.value = 0.35;
+    master.connect(dest);
+
+    const acordes = [[146.83,220,261.63],[116.54,174.61,233.08],[174.61,220,261.63],[130.81,196,261.63]];
+    let step = 0;
+    const tocar = () => {
+      const now = recActx.currentTime;
+      acordes[step % acordes.length].forEach((freq) => {
+        const osc = recActx.createOscillator();
+        const g = recActx.createGain();
+        osc.type = "triangle"; osc.frequency.setValueAtTime(freq, now);
+        g.gain.setValueAtTime(0.001, now);
+        g.gain.linearRampToValueAtTime(0.18, now + 0.5);
+        g.gain.linearRampToValueAtTime(0.001, now + 3.9);
+        osc.connect(g); g.connect(master);
+        osc.start(now); osc.stop(now + 3.95);
+      });
+      step++;
+    };
+    tocar();
+    const iv1 = setInterval(tocar, 4000);
+    const iv2 = setInterval(() => {
+      const now = recActx.currentTime;
+      const osc = recActx.createOscillator();
+      const g = recActx.createGain();
+      osc.type = "sine"; osc.frequency.setValueAtTime(70, now);
+      osc.frequency.exponentialRampToValueAtTime(36, now + 0.24);
+      g.gain.setValueAtTime(0.32, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(g); g.connect(master);
+      osc.start(now); osc.stop(now + 0.3);
+    }, 1000);
+
+    const stream = new MediaStream([
+      ...canvas.captureStream(30).getVideoTracks(),
+      ...dest.stream.getAudioTracks()
+    ]);
+    const mimes = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"];
+    const mime = mimes.find((m) => MediaRecorder.isTypeSupported(m)) || "";
+    const ext = mime.includes("mp4") ? "mp4" : "webm";
+    const rec = mime ? new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 }) : new MediaRecorder(stream);
+
+    const chunks = [];
+    rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    rec.onstop = () => {
+      clearInterval(iv1); clearInterval(iv2);
+      recActx.close().catch(() => {});
+      const blob = new Blob(chunks, { type: mime || `video/${ext}` });
+      const url = URL.createObjectURL(blob);
+      const nome = `salomao_tempodiario.${ext}`;
+      manualDownloadLink.href = url;
+      manualDownloadLink.download = nome;
+      manualDownloadLink.style.display = "inline-flex";
+
+      const a = document.createElement("a");
+      a.href = url; a.download = nome;
+      document.body.appendChild(a); a.click(); a.remove();
+
+      btnRenderDownload.disabled = false; btnPlay.disabled = false; btnStop.disabled = false;
+      progressBar.style.width = "100%";
+      statusText.textContent = `Pronto! Download de ${nome} iniciado.`;
+    };
+
+    rec.start(250);
+    const recStart = performance.now();
+    const recLoop = (now) => {
+      const t = (now - recStart) / 1000;
+      const pct = Math.min(100, Math.round((t / TOTAL_DUR) * 100));
+      progressBar.style.width = `${pct}%`;
+      statusText.textContent = `Renderizando vídeo... ${pct}% (${Math.min(t, TOTAL_DUR).toFixed(0)}s / ${TOTAL_DUR.toFixed(0)}s)`;
+      if (t >= TOTAL_DUR) {
+        desenharCena(TOTAL_DUR - 0.05);
+        setTimeout(() => rec.stop(), 200);
+        return;
+      }
+      desenharCena(t);
+      requestAnimationFrame(recLoop);
+    };
+    requestAnimationFrame(recLoop);
+  });
+
+  desenharCena(0.8);
+})();
+</script>
+</body>
+</html>
