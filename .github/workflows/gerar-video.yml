@@ -1,0 +1,32 @@
+name: Gerar Vídeo Salomão (@tempodiario)
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'gerar_video_salomao.py'
+      - '.github/workflows/gerar-video.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar dependências
+        run: pip install edge-tts pillow numpy imageio-ffmpeg
+      - name: Gerar vídeo MP4 com voz neural
+        run: python gerar_video_salomao.py
+      - name: Publicar MP4 no GitHub Pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add salomao_tempodiario.mp4
+          git commit -m "Publicar salomao_tempodiario.mp4" || exit 0
+          git push
