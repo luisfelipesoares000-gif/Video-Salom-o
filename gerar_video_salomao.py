@@ -3,18 +3,17 @@ import math
 import os
 import re
 import subprocess
+import sys
 import wave
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import edge_tts
 import imageio_ffmpeg
 
-# ==========================================================
-# CONFIGURAÇÕES DO CANAL E VOZES NEURAIS
-# ==========================================================
 CANAL_NOME = "TEMPO DIÁRIO"
 CANAL_HANDLE = "@tempodiario"
 ARQUIVO_SAIDA = "salomao_tempodiario.mp4"
+ARQUIVO_AUDIO = "salomao_audio.mp3"
 
 LARGURA, ALTURA = 1080, 1920
 FPS = 30
@@ -22,12 +21,9 @@ SAMPLE_RATE = 44100
 PAUSA_ENTRE_BEATS = 0.06
 PAUSA_ENTRE_CENAS = 0.12
 
-VOZ_APRESENTADOR = "pt-BR-FabioNeural"   # Jovem, expressivo e dinâmico
-VOZ_EPICA = "pt-BR-DonatoNeural"         # Grave e solene para citações bíblicas
+VOZ_APRESENTADOR = "pt-BR-FabioNeural"
+VOZ_EPICA = "pt-BR-DonatoNeural"
 
-# ==========================================================
-# ROTEIRO COM BEATS DINÂMICOS (2 VOZES + 5 HUMORES)
-# ==========================================================
 CENAS = [
     {
         "id": "gancho",
@@ -39,10 +35,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+18%", "pitch": "+4Hz", "humor": "empolgado",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.90",
                 "texto": "O homem mais sábio que já pisou na Terra...",
             },
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+14%", "pitch": "-2Hz", "humor": "choque",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.95",
                 "texto": "terminou no inferno? A história de Salomão tem um final que quase ninguém percebeu.",
             },
         ],
@@ -57,10 +55,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+18%", "pitch": "+3Hz", "humor": "empolgado",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.90",
                 "texto": "Tudo começou em Gibeom. Em vez de dinheiro ou poder, Salomão pediu sabedoria.",
             },
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+20%", "pitch": "+5Hz", "humor": "empolgado",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.88",
                 "texto": "Deus gostou tanto que deu tudo a ele: seiscentos e sessenta e seis talentos de ouro por ano, três mil provérbios e o templo mais glorioso do mundo!",
             },
         ],
@@ -75,10 +75,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+18%", "pitch": "+3Hz", "humor": "choque",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.90",
                 "texto": "Mas a glória virou armadilha! A Bíblia diz que ele teve setecentas esposas e trezentas concubinas. Mil mulheres!",
             },
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+12%", "pitch": "-3Hz", "humor": "tenso",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.96",
                 "texto": "E na velhice, elas desviaram o coração dele para deuses falsos, com altares proibidos em Jerusalém.",
             },
         ],
@@ -93,10 +95,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+14%", "pitch": "-2Hz", "humor": "tenso",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.94",
                 "texto": "A resposta de Deus foi dura. Em Primeiro Reis capítulo onze, o Senhor se irou porque havia aparecido a Salomão duas vezes...",
             },
             {
                 "voz": VOZ_EPICA, "rate": "+6%", "pitch": "-6Hz", "humor": "epico",
+                "piper": "pt_BR-jeff-medium", "piper_speed": "1.02",
                 "texto": "e avisou: o reino seria rasgado, tirando dez tribos da mão de sua família!",
             },
         ],
@@ -111,10 +115,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+12%", "pitch": "-2Hz", "humor": "misterio",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.96",
                 "texto": "E aqui mora o susto. O livro de Reis conta a morte de Salomão sem registrar nenhum pedido de perdão.",
             },
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+16%", "pitch": "+2Hz", "humor": "choque",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.92",
                 "texto": "E séculos depois, Neemias ainda usa Salomão como alerta de quem pecou gravemente!",
             },
         ],
@@ -129,10 +135,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+18%", "pitch": "+4Hz", "humor": "misterio",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.90",
                 "texto": "Então ele se perdeu para sempre? Espera! Olha para o livro de Eclesiastes. Um rei cansado no fim da vida chama todo aquele luxo de vaidade...",
             },
             {
                 "voz": VOZ_EPICA, "rate": "+4%", "pitch": "-6Hz", "humor": "epico",
+                "piper": "pt_BR-jeff-medium", "piper_speed": "1.04",
                 "texto": "e fecha com uma frase: Teme a Deus e guarda os seus mandamentos!",
             },
         ],
@@ -147,10 +155,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+16%", "pitch": "+2Hz", "humor": "convicto",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.92",
                 "texto": "E tem uma segunda pista pesada em Segundo Samuel sete. Deus prometeu a Davi:",
             },
             {
                 "voz": VOZ_EPICA, "rate": "+5%", "pitch": "-6Hz", "humor": "epico",
+                "piper": "pt_BR-jeff-medium", "piper_speed": "1.02",
                 "texto": "se ele pecar, eu o castigarei, mas a minha misericórdia não se apartará dele, como apartei de Saul.",
             },
         ],
@@ -165,10 +175,12 @@ CENAS = [
         "beats": [
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+16%", "pitch": "+2Hz", "humor": "convicto",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.92",
                 "texto": "A Bíblia não crava uma frase final, mas deixa o rastro do arrependimento e da aliança.",
             },
             {
                 "voz": VOZ_APRESENTADOR, "rate": "+20%", "pitch": "+5Hz", "humor": "empolgado",
+                "piper": "pt_BR-faber-medium", "piper_speed": "0.88",
                 "texto": "E aí, para você: Salomão foi salvo ou não? Comenta sim ou não e segue o Tempo Diário!",
             },
         ],
@@ -176,6 +188,8 @@ CENAS = [
 ]
 
 _FONT_CACHE = {}
+_PIPER_MODELS = {}
+_EDGE_BLOQUEADO = False
 
 
 def carregar_fonte(tamanho):
@@ -230,55 +244,101 @@ def ease_out_back(x):
     return 1.0 + c3 * ((x - 1.0) ** 3) + c1 * ((x - 1.0) ** 2)
 
 
-# ==========================================================
-# SÍNTESE DE VOZ NEURAL COM FALLBACK SEGURO
-# ==========================================================
-async def sintetizar_beat(beat, mp3_path):
-    tentativas = [
-        {"voice": beat["voz"], "rate": beat["rate"], "pitch": beat["pitch"]},
-        {"voice": beat["voz"], "rate": beat["rate"], "pitch": "+0Hz"},
-        {"voice": "pt-BR-AntonioNeural", "rate": "+15%", "pitch": "+0Hz"},
-    ]
-    for cfg in tentativas:
+def garantir_modelo_piper(nome_modelo):
+    if nome_modelo in _PIPER_MODELS:
+        return _PIPER_MODELS[nome_modelo]
+    onnx_path = f"{nome_modelo}.onnx"
+    if not os.path.exists(onnx_path):
+        print(f"   [Piper] Baixando voz offline {nome_modelo}...")
         try:
-            try:
-                comm = edge_tts.Communicate(
-                    beat["texto"], cfg["voice"], rate=cfg["rate"],
-                    pitch=cfg["pitch"], boundary="WordBoundary"
-                )
-            except TypeError:
-                comm = edge_tts.Communicate(
-                    beat["texto"], cfg["voice"], rate=cfg["rate"], pitch=cfg["pitch"]
-                )
-
-            word_ev, sent_ev = [], []
-            with open(mp3_path, "wb") as f:
-                async for chunk in comm.stream():
-                    ctype = chunk.get("type")
-                    if ctype == "audio":
-                        f.write(chunk["data"])
-                    elif ctype == "WordBoundary":
-                        word_ev.append({
-                            "text": chunk["text"].strip(),
-                            "start": chunk["offset"] / 10_000_000.0,
-                            "dur": max(0.07, chunk["duration"] / 10_000_000.0),
-                        })
-                    elif ctype == "SentenceBoundary":
-                        sent_ev.append({
-                            "text": chunk["text"].strip(),
-                            "start": chunk["offset"] / 10_000_000.0,
-                            "dur": max(0.18, chunk["duration"] / 10_000_000.0),
-                        })
-            if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 500:
-                return word_ev, sent_ev
+            subprocess.run(
+                [sys.executable, "-m", "piper.download_voices", nome_modelo],
+                check=True,
+            )
         except Exception:
-            continue
-    raise RuntimeError(f"Falha ao sintetizar áudio para: {beat['texto']}")
+            if nome_modelo != "pt_BR-faber-medium":
+                return garantir_modelo_piper("pt_BR-faber-medium")
+            raise
+    _PIPER_MODELS[nome_modelo] = onnx_path
+    return onnx_path
 
 
-def decodificar_mp3_pcm(ffmpeg_exe, mp3_path):
+def sintetizar_piper_wav(beat, wav_path):
+    modelo = garantir_modelo_piper(beat.get("piper", "pt_BR-faber-medium"))
+    txt_tmp = "temp_piper_input.txt"
+    with open(txt_tmp, "w", encoding="utf-8") as f:
+        f.write(beat["texto"])
+    try:
+        subprocess.run(
+            [
+                sys.executable, "-m", "piper",
+                "-m", modelo,
+                "-i", txt_tmp,
+                "-f", wav_path,
+                "--length-scale", beat.get("piper_speed", "0.92"),
+            ],
+            check=True,
+        )
+    finally:
+        if os.path.exists(txt_tmp):
+            os.remove(txt_tmp)
+
+
+async def sintetizar_beat(beat, idx, b_idx):
+    global _EDGE_BLOQUEADO
+    mp3_path = f"temp_c{idx}_b{b_idx}.mp3"
+    wav_path = f"temp_c{idx}_b{b_idx}.wav"
+
+    if not _EDGE_BLOQUEADO:
+        tentativas = [
+            {"voice": beat["voz"], "rate": beat["rate"], "pitch": beat["pitch"]},
+            {"voice": beat["voz"], "rate": beat["rate"], "pitch": "+0Hz"},
+            {"voice": "pt-BR-AntonioNeural", "rate": "+15%", "pitch": "+0Hz"},
+        ]
+        for cfg in tentativas:
+            try:
+                try:
+                    comm = edge_tts.Communicate(
+                        beat["texto"], cfg["voice"], rate=cfg["rate"],
+                        pitch=cfg["pitch"], boundary="WordBoundary"
+                    )
+                except TypeError:
+                    comm = edge_tts.Communicate(
+                        beat["texto"], cfg["voice"], rate=cfg["rate"], pitch=cfg["pitch"]
+                    )
+
+                word_ev, sent_ev = [], []
+                with open(mp3_path, "wb") as f:
+                    async for chunk in comm.stream():
+                        ctype = chunk.get("type")
+                        if ctype == "audio":
+                            f.write(chunk["data"])
+                        elif ctype == "WordBoundary":
+                            word_ev.append({
+                                "text": chunk["text"].strip(),
+                                "start": chunk["offset"] / 10_000_000.0,
+                                "dur": max(0.07, chunk["duration"] / 10_000_000.0),
+                            })
+                        elif ctype == "SentenceBoundary":
+                            sent_ev.append({
+                                "text": chunk["text"].strip(),
+                                "start": chunk["offset"] / 10_000_000.0,
+                                "dur": max(0.18, chunk["duration"] / 10_000_000.0),
+                            })
+                if os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 500:
+                    return mp3_path, word_ev, sent_ev
+            except Exception as e:
+                print(f"   [Aviso] Edge TTS falhou ({e}), tentando fallback...")
+        _EDGE_BLOQUEADO = True
+
+    # Plano B 100% offline: Piper TTS em Português do Brasil
+    sintetizar_piper_wav(beat, wav_path)
+    return wav_path, [], []
+
+
+def decodificar_audio_pcm(ffmpeg_exe, audio_path):
     cmd = [
-        ffmpeg_exe, "-y", "-i", mp3_path,
+        ffmpeg_exe, "-y", "-i", audio_path,
         "-f", "s16le", "-ac", "1", "-ar", str(SAMPLE_RATE), "pipe:1",
     ]
     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, check=True)
@@ -378,9 +438,6 @@ def gerar_trilha_e_sfx(duracao_total, inicios_cenas):
     return pad * 0.10 + pulso * 0.09 + sfx * 0.25
 
 
-# ==========================================================
-# DESENHO DO APRESENTADOR E CENÁRIOS DINÂMICOS
-# ==========================================================
 def criar_fundo_cena(cor_topo, cor_base, cor_glow):
     y = np.linspace(0, 1, ALTURA, dtype=np.float32)[:, None]
     x = np.linspace(0, 1, LARGURA, dtype=np.float32)[None, :]
@@ -415,10 +472,8 @@ def desenhar_coroa(draw, cx, cy, s, tilt=0.0, cor=(255, 204, 41)):
 
 
 def desenhar_apresentador(draw, cx, cy, s, t, boca, humor):
-    """Apresentador do Tempo Diário: aparece do segundo 0 até o fim com expressões."""
     cy += math.sin(t * 4.2) * 5 * s
 
-    # Jaqueta moderna + detalhe dourado
     draw.polygon(
         [
             (cx - 145 * s, cy + 220 * s),
@@ -435,7 +490,6 @@ def desenhar_apresentador(draw, cx, cy, s, t, boca, humor):
         fill=(245, 183, 0),
     )
 
-    # Mãos gesticulando ao falar
     gesto_y = math.sin(t * 9.0) * 14 * s * (0.4 + boca)
     mao_e_x = cx + (-65 * s if humor == "misterio" else -135 * s)
     mao_e_y = cy + (55 * s + gesto_y if humor == "choque" else 75 * s if humor == "misterio" else 135 * s + gesto_y)
@@ -446,14 +500,12 @@ def desenhar_apresentador(draw, cx, cy, s, t, boca, humor):
         r = 25 * s
         draw.ellipse((mx - r, my - r, mx + r, my + r), fill=(234, 182, 140), outline=(26, 18, 13), width=max(2, int(5 * s)))
 
-    # Rosto
     draw.ellipse(
         (cx - 76 * s, cy - 117 * s, cx + 76 * s, cy + 47 * s),
         fill=(234, 182, 140),
         outline=(25, 18, 13),
         width=max(2, int(6 * s)),
     )
-    # Cabelo / Topete
     draw.polygon(
         [
             (cx - 76 * s, cy - 52 * s),
@@ -468,10 +520,8 @@ def desenhar_apresentador(draw, cx, cy, s, t, boca, humor):
         outline=(12, 10, 13),
         width=max(2, int(5 * s)),
     )
-    # Barba curta estilizada
     draw.arc((cx - 54 * s, cy - 20 * s, cx + 54 * s, cy + 52 * s), start=15, end=165, fill=(36, 29, 34), width=max(3, int(9 * s)))
 
-    # Olhos expressivos + piscar
     piscar = (t % 3.1) > 2.97
     eye_s = 1.26 if humor == "choque" else 0.84 if humor == "tenso" else 1.0
     for side in (-1, 1):
@@ -489,7 +539,6 @@ def desenhar_apresentador(draw, cx, cy, s, t, boca, humor):
         tilt_b = (7 * s) if humor in ("tenso", "epico") else (-6 * s) if humor == "choque" else (-3 * s)
         draw.line((ox - 16 * s, brow_y + side * tilt_b, ox + 16 * s, brow_y - side * tilt_b), fill=(28, 23, 27), width=max(2, int(6 * s)))
 
-    # Boca lip-sync
     bh = max(4 * s, (4 + 17 * boca) * s)
     bw = (14 if humor == "choque" else 20) * s
     draw.ellipse((cx - bw, cy + 12 * s - bh, cx + bw, cy + 12 * s + bh), fill=(84, 19, 26), outline=(25, 15, 15), width=max(2, int(3 * s)))
@@ -613,11 +662,8 @@ def desenhar_hud_e_legendas(draw, cena, t_global, dur_total, grupo):
                 cx += w + espaco
 
 
-# ==========================================================
-# PIPELINE PRINCIPAL
-# ==========================================================
 async def preparar_tudo(ffmpeg_exe):
-    print("[1/4] Gerando 2 vozes neurais expressivas (FabioNeural + DonatoNeural)...")
+    print("[1/4] Gerando narração em Português (Edge TTS com fallback Piper)...")
     cenas_info, beats_timeline, audios_pcm, palavras_globais, inicios_cenas = [], [], [], [], []
     cursor = 0.0
     pausa_beat = np.zeros(int(PAUSA_ENTRE_BEATS * SAMPLE_RATE), dtype=np.float32)
@@ -627,11 +673,11 @@ async def preparar_tudo(ffmpeg_exe):
         inicio_cena = cursor
         inicios_cenas.append(inicio_cena)
         for b_idx, beat in enumerate(cena["beats"]):
-            mp3_tmp = f"temp_c{idx}_b{b_idx}.mp3"
-            word_ev, sent_ev = await sintetizar_beat(beat, mp3_tmp)
-            pcm = decodificar_mp3_pcm(ffmpeg_exe, mp3_tmp)
+            audio_tmp, word_ev, sent_ev = await sintetizar_beat(beat, idx, b_idx)
+            pcm = decodificar_audio_pcm(ffmpeg_exe, audio_tmp)
             dur = len(pcm) / SAMPLE_RATE
-            os.remove(mp3_tmp)
+            if os.path.exists(audio_tmp):
+                os.remove(audio_tmp)
 
             if not word_ev:
                 word_ev = construir_palavras_fallback(beat["texto"], dur, sent_ev)
@@ -658,9 +704,14 @@ async def preparar_tudo(ffmpeg_exe):
     pad_fim = np.zeros(max(0, int(dur_total * SAMPLE_RATE) - len(voz_full)), dtype=np.float32)
     voz_full = np.concatenate([voz_full, pad_fim])
 
-    print("[2/4] Mixando trilha sonora + impactos...")
+    # Normaliza o volume da voz para ficar sempre alto e claro
+    pico_voz = float(np.max(np.abs(voz_full))) if len(voz_full) else 1.0
+    if pico_voz > 0.01:
+        voz_full = voz_full * (0.85 / pico_voz)
+
+    print("[2/4] Mixando trilha sonora + exportando MP3 separado...")
     bgm = gerar_trilha_e_sfx(dur_total, inicios_cenas)
-    mix = np.tanh((voz_full * 0.95 + bgm) * 1.05)
+    mix = np.tanh((voz_full + bgm) * 1.05)
     pcm16 = (np.clip(mix, -1.0, 1.0) * 32767.0).astype(np.int16)
 
     with wave.open("temp_audio.wav", "wb") as wf:
@@ -668,6 +719,13 @@ async def preparar_tudo(ffmpeg_exe):
         wf.setsampwidth(2)
         wf.setframerate(SAMPLE_RATE)
         wf.writeframes(pcm16.tobytes())
+
+    # Salva também o áudio completo em MP3 separado
+    subprocess.run(
+        [ffmpeg_exe, "-y", "-i", "temp_audio.wav", "-c:a", "libmp3lame", "-b:a", "192k", ARQUIVO_AUDIO],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+    )
+    print(f"   - Áudio salvo em: {ARQUIVO_AUDIO}")
 
     return cenas_info, beats_timeline, dur_total, voz_full, agrupar_legendas(palavras_globais)
 
@@ -770,7 +828,7 @@ def renderizar_video(ffmpeg_exe, cenas_info, beats_timeline, dur_total, voz_full
         os.remove("temp_audio.wav")
     if proc.returncode != 0:
         raise RuntimeError("Erro ao codificar vídeo com FFmpeg.")
-    print(f"[4/4] Vídeo pronto em: {os.path.abspath(ARQUIVO_SAIDA)}")
+    print(f"[4/4] Vídeo e áudio prontos!")
 
 
 def main():
